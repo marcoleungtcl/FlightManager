@@ -93,16 +93,65 @@ def assign_pilot():
     print("Pilot assigned successfully!")
 
 def view_flights():
+    """View flights with optional filtering using key=value pairs"""
+    print("\nView Flights")
+    print("Enter filter criteria as key=value pairs (comma separated)")
+    print("Available filters: flight_number, status, company, pilot_id")
+    print("Example: status=boarding,company=Delta")
+    print("Leave empty to show all flights")
+    
+    filter_input = input("Enter filters: ").strip()
+    
+    filters = {}
+    if filter_input:
+        for pair in filter_input.split(','):
+            pair = pair.strip()
+            if '=' in pair:
+                key, value = pair.split('=', 1)
+                key = key.strip().lower()
+                value = value.strip()
+                filters[key] = value
+    
     with get_connection() as conn:
-        flights = Flight.get_all(conn)
-        print("\nAll Flights:")
+        # Convert filters to appropriate types
+        flight_number = filters.get('flight_number')
+        status = FlightStatus(filters['status']) if 'status' in filters else None
+        company = filters.get('company')
+        pilot_id = filters.get('pilot_id')
+        
+        # Get pilot instance if pilot_id was provided
+        pilot = None
+        if pilot_id:
+            pilot = Pilot.get_by_id(conn, pilot_id)
+            if not pilot:
+                print(f"\nError: No pilot found with ID {pilot_id}")
+                return
+        
+        # Get filtered flights
+        flights = Flight.get_all(
+            conn,
+            flight_number=flight_number,
+            status=status,
+            company=company,
+            pilot=pilot
+        )
+        
+        # Display results
+        print(f"\nFlights ({'all' if not filters else 'filtered'}):")
+        if not flights:
+            print("No flights found matching the criteria")
+            return
+            
         for flight in flights:
-            pilot = f"{flight.pilot.first_name} {flight.pilot.last_name}" if flight.pilot else "Unassigned"
+            pilot_name = f"{flight.pilot.first_name} {flight.pilot.last_name}" if flight.pilot else "Unassigned"
             print(
                 f"ID: {flight.flight_id} | {flight.flight_number} | "
                 f"{flight.origin_airport.code} → {flight.destination_airport.code} | "
-                f"Pilot: {pilot} | Status: {flight.status.value}"
+                f"Depart: {flight.scheduled_departure_time.strftime('%Y-%m-%d %H:%M')} | "
+                f"Pilot: {pilot_name} | Status: {flight.status.value} | "
+                f"Company: {flight.company}"
             )
+
 
 def main():
     initialize_database()

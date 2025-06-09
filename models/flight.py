@@ -187,9 +187,18 @@ class Flight:
         )
 
     @classmethod
-    def get_all(cls, conn: sqlite3.Connection) -> List['Flight']:
+    def get_all(
+        cls,
+        conn: sqlite3.Connection,
+        flight_number: Optional[str] = None,
+        status: Optional[FlightStatus] = None,
+        company: Optional[str] = None,
+        pilot: Optional[Pilot] = None
+    ) -> List['Flight']:
         cursor = conn.cursor()
-        cursor.execute('''
+        
+        # Base query
+        query = '''
             SELECT 
                 f.flight_id,
                 f.flight_number,
@@ -206,7 +215,34 @@ class Flight:
             JOIN airports a1 ON f.origin_airport_code = a1.code
             JOIN airports a2 ON f.destination_airport_code = a2.code
             LEFT JOIN pilots p ON f.pilot_id = p.pilot_id
-        ''')
+        '''
+        
+        # Build WHERE clause based on provided filters
+        conditions = []
+        params = []
+        
+        if flight_number is not None:
+            conditions.append("f.flight_number LIKE ?")
+            params.append(f"%{flight_number}%")
+        
+        if status is not None:
+            conditions.append("f.status = ?")
+            params.append(status.value)
+        
+        if company is not None:
+            conditions.append("f.company LIKE ?")
+            params.append(f"%{company}%")
+        
+        if pilot is not None:
+            conditions.append("f.pilot_id = ?")
+            params.append(pilot.pilot_id)
+        
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+        
+        query += " ORDER BY f.scheduled_departure_time"
+        
+        cursor.execute(query, params)
         
         flights = []
         for row in cursor.fetchall():
@@ -229,7 +265,6 @@ class Flight:
             ))
         return flights
 
-
     def delete(self, conn: sqlite3.Connection) -> None:
         if self.flight_id:
             conn.execute('DELETE FROM flights WHERE flight_id = ?', (self.flight_id,))
@@ -251,46 +286,3 @@ class Flight:
         self.arrival_time = arrival_time
         self.status = FlightStatus.ARRIVED
         self.save(conn)
-
-    @classmethod
-    def get_flights_by_pilot(cls, conn: sqlite3.Connection, pilot: Pilot) -> List['Flight']:
-        """Returns all flights assigned to the given pilot"""
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT 
-                f.flight_id,
-                f.flight_number,
-                f.scheduled_departure_time,
-                f.estimated_arrival_time,
-                f.departure_time,
-                f.arrival_time,
-                f.status,
-                f.company,
-                a1.code, a1.name, a1.address,
-                a2.code, a2.name, a2.address
-            FROM flights f
-            JOIN airports a1 ON f.origin_airport_code = a1.code
-            JOIN airports a2 ON f.destination_airport_code = a2.code
-            WHERE f.pilot_id = ?
-            ORDER BY f.scheduled_departure_time
-        ''', (pilot.pilot_id,))
-        
-        flights = []
-        for row in cursor.fetchall():
-            origin = Airport(row[8], row[9], row[10])
-            destination = Airport(row[11], row[12], row[13])
-            
-            flights.append(cls(
-                flight_id=row[0],
-                flight_number=row[1],
-                origin_airport=origin,
-                destination_airport=destination,
-                scheduled_departure_time=datetime.fromisoformat(row[2]),
-                estimated_arrival_time=datetime.fromisoformat(row[3]),
-                departure_time=datetime.fromisoformat(row[4]) if row[4] else None,
-                arrival_time=datetime.fromisoformat(row[5]) if row[5] else None,
-                status=FlightStatus(row[6]),
-                pilot=pilot,  # Use the passed pilot instance
-                company=row[7]
-            ))
-        return flights
