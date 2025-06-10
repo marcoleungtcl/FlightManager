@@ -165,8 +165,8 @@ class Flight:
                 f.arrival_time,
                 f.status,
                 f.company,
-                a1.code, a1.name, a1.address,
-                a2.code, a2.name, a2.address,
+                a1.code, a1.name, a1.address, a1.status,
+                a2.code, a2.name, a2.address, a2.status,
                 p.pilot_id, p.first_name, p.last_name
             FROM flights f
             JOIN airports a1 ON f.origin_airport_code = a1.code
@@ -181,9 +181,9 @@ class Flight:
         if not row:
             return None
 
-        origin = Airport(row[8], row[9], row[10])
-        destination = Airport(row[11], row[12], row[13])
-        pilot = Pilot(row[14], row[15], row[16]) if row[14] else None
+        origin = Airport(row[8], row[9], row[10], row[11])
+        destination = Airport(row[12], row[13], row[14], row[15])
+        pilot = Pilot(row[16], row[17], row[18]) if row[16] else None
 
         return cls(
             flight_id=row[0],
@@ -221,8 +221,8 @@ class Flight:
                 f.arrival_time,
                 f.status,
                 f.company,
-                a1.code, a1.name, a1.address,
-                a2.code, a2.name, a2.address,
+                a1.code, a1.name, a1.address, a1.status,
+                a2.code, a2.name, a2.address, a2.status,
                 p.pilot_id, p.first_name, p.last_name
             FROM flights f
             JOIN airports a1 ON f.origin_airport_code = a1.code
@@ -259,9 +259,9 @@ class Flight:
 
         flights = []
         for row in cursor.fetchall():
-            origin = Airport(row[8], row[9], row[10])
-            destination = Airport(row[11], row[12], row[13])
-            pilot = Pilot(row[14], row[15], row[16]) if row[14] else None
+            origin = Airport(row[8], row[9], row[10], row[11])
+            destination = Airport(row[12], row[13], row[14], row[15])
+            pilot = Pilot(row[16], row[17], row[18]) if row[16] else None
 
             flights.append(
                 cls(
