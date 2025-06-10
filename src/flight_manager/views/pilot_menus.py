@@ -1,5 +1,6 @@
-from models.db import get_connection
-from models.pilot import Pilot
+from flight_manager.models.db import get_connection
+from flight_manager.models.pilot import Pilot
+from flight_manager.models.flight import Flight
 
 def add_pilot():
     with get_connection() as conn:
@@ -77,8 +78,52 @@ def update_pilot():
                 print("Invalid choice. Please try again.")
 
 
+def delete_pilot():
+    """Delete a pilot through an interactive menu"""
+    # First show all pilots so user can choose which to delete
+    view_pilots()
+
+    # Get pilot ID to delete
+    pilot_id = input("\nEnter ID of pilot to delete (or 'cancel' to abort): ").strip()
+    if pilot_id.lower() == "cancel":
+        return
+    if not pilot_id.isdigit():
+        print("Invalid pilot ID - must be a number")
+        return
+
+    with get_connection() as conn:
+        pilot = Pilot.get_by_id(conn, int(pilot_id))
+        if not pilot:
+            print(f"No pilot found with ID {pilot_id}")
+            return
+
+        # Show confirmation with pilot details
+        print("\nPilot to be deleted:")
+        print(f"ID: {pilot.pilot_id} | Name: {pilot.first_name} {pilot.last_name}")
+
+        # Check if pilot is assigned to any flights
+        flights = Flight.get_all(conn, pilot=pilot)
+        if flights:
+            print("\nCannot delete pilot - assigned to the following flights:")
+            for flight in flights:
+                print(f"Flight {flight.flight_number} (ID: {flight.flight_id})")
+            print("\nPlease reassign or delete these flights first.")
+            return
+
+        confirmation = input("\nAre you sure you want to delete this pilot? (y/n): ").strip().lower()
+        if confirmation == 'y':
+            try:
+                pilot.delete(conn)
+                print(f"\nPilot {pilot.first_name} {pilot.last_name} (ID: {pilot.pilot_id}) deleted successfully!")
+            except Exception as e:
+                print(f"\nError deleting pilot: {str(e)}")
+        else:
+            print("\nDeletion cancelled. No changes were made.")
+
+
 menu_options = [
     ("View Pilots", view_pilots),
     ("Add Pilot", add_pilot),
     ("Update Pilot", update_pilot),
+    ("Delete Pilot", delete_pilot)
 ]

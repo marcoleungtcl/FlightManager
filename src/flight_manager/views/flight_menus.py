@@ -1,9 +1,9 @@
 from datetime import datetime
-from models.db import get_connection
-from models.flight import FlightStatus, Flight
-from models.pilot import Pilot
-from models.airports import Airport
-from views.airport_menus import view_airports
+from flight_manager.models.db import get_connection
+from flight_manager.models.flight import FlightStatus, Flight
+from flight_manager.models.pilot import Pilot
+from flight_manager.models.airports import Airport
+from flight_manager.views.airport_menus import view_airports
 
 def add_flight():
     with get_connection() as conn:
@@ -53,8 +53,8 @@ def assign_pilot_to_flight(flight: Flight):
 def view_flights():
     """View flights with optional filtering using key=value pairs"""
     print("Enter filter criteria as key=value pairs (comma separated)")
-    print("Available filters: flight_number, status, company, pilot_id")
-    print("Example: status=boarding,company=Delta")
+    print("Available filters: flight_number, status, company, pilot_id, origin, destination")
+    print("Example: status=boarding,company=Delta,origin=JFK")
     print("Leave empty to show all flights")
 
     filter_input = input("Enter filters: ").strip()
@@ -75,6 +75,8 @@ def view_flights():
         status = FlightStatus(filters["status"]) if "status" in filters else None
         company = filters.get("company")
         pilot_id = filters.get("pilot_id")
+        origin_code = filters.get("origin")
+        destination_code = filters.get("destination")
 
         # Get pilot instance if pilot_id was provided
         pilot = None
@@ -84,6 +86,21 @@ def view_flights():
                 print(f"\nError: No pilot found with ID {pilot_id}")
                 return
 
+        # Get airport instances if codes were provided
+        origin_airport = None
+        if origin_code:
+            origin_airport = Airport.get_by_code(conn, origin_code.upper())
+            if not origin_airport:
+                print(f"\nError: No airport found with code {origin_code}")
+                return
+
+        destination_airport = None
+        if destination_code:
+            destination_airport = Airport.get_by_code(conn, destination_code.upper())
+            if not destination_airport:
+                print(f"\nError: No airport found with code {destination_code}")
+                return
+
         # Get filtered flights
         flights = Flight.get_all(
             conn,
@@ -91,6 +108,8 @@ def view_flights():
             status=status,
             company=company,
             pilot=pilot,
+            origin_airport=origin_airport,
+            destination_airport=destination_airport,
         )
 
         # Display results
@@ -266,8 +285,53 @@ def update_flight():
             else:
                 print("Invalid choice. Please try again.")
 
+def delete_flight():
+    """Delete a flight through an interactive menu"""
+    # First show all flights so user can choose which to delete
+    view_flights()
+
+    # Get flight ID to delete
+    flight_id = input("\nEnter ID of flight to delete (or 'cancel' to abort): ").strip()
+    if flight_id.lower() == "cancel":
+        return
+    if not flight_id.isdigit():
+        print("Invalid flight ID")
+        return
+
+    with get_connection() as conn:
+        flight = Flight.get_by_id(conn, int(flight_id))
+        if not flight:
+            print(f"No flight found with ID {flight_id}")
+            return
+
+        # Show confirmation with flight details
+        print("\nFlight to be deleted:")
+        pilot_name = (
+            f"{flight.pilot.first_name} {flight.pilot.last_name}"
+            if flight.pilot
+            else "Unassigned"
+        )
+        print(
+            f"ID: {flight.flight_id} | {flight.flight_number} | "
+            f"{flight.origin_airport.code} → {flight.destination_airport.code} | "
+            f"Depart: {flight.scheduled_departure_time.strftime('%Y-%m-%d %H:%M')} | "
+            f"Pilot: {pilot_name} | Status: {flight.status.value} | "
+            f"Company: {flight.company}"
+        )
+
+        confirmation = input("\nAre you sure you want to delete this flight? (y/n): ").strip().lower()
+        if confirmation == 'y':
+            try:
+                flight.delete(conn)
+                print(f"\nFlight {flight.flight_number} (ID: {flight.flight_id}) deleted successfully!")
+            except Exception as e:
+                print(f"\nError deleting flight: {str(e)}")
+        else:
+            print("\nDeletion cancelled. No changes were made.")
+
 menu_options = [
     ("View Flights", view_flights),
     ("Add Flight", add_flight),
     ("Edit Flights", update_flight),
+    ("Delete Flight", delete_flight)
 ]

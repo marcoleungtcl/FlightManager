@@ -9,6 +9,9 @@ def get_connection(db_path: str = "airline.db") -> Iterator[sqlite3.Connection]:
     try:
         yield conn
         conn.commit()
+    except (ValueError, KeyError) as e:
+        conn.rollback()
+        print(f"\n{e}")
     except Exception:
         conn.rollback()
         raise

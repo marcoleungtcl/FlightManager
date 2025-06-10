@@ -2,11 +2,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
-from contextlib import contextmanager
 import sqlite3
 
-from models.pilot import Pilot
-from models.airports import Airport
+from flight_manager.models.pilot import Pilot
+from flight_manager.models.airports import Airport
 
 
 class FlightStatus(Enum):
@@ -207,6 +206,8 @@ class Flight:
         status: Optional[FlightStatus] = None,
         company: Optional[str] = None,
         pilot: Optional[Pilot] = None,
+        origin_airport: Optional[Airport] = None,
+        destination_airport: Optional[Airport] = None
     ) -> List["Flight"]:
         cursor = conn.cursor()
 
@@ -249,6 +250,14 @@ class Flight:
         if pilot is not None:
             conditions.append("f.pilot_id = ?")
             params.append(pilot.pilot_id)
+
+        if origin_airport is not None:
+            conditions.append("f.origin_airport_code = ?")
+            params.append(origin_airport.code)
+
+        if destination_airport is not None:
+            conditions.append("f.destination_airport_code = ?")
+            params.append(destination_airport.code)
 
         if conditions:
             query += " WHERE " + " AND ".join(conditions)

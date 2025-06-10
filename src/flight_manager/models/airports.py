@@ -34,7 +34,7 @@ class Airport:
     def drop_table(cls, conn: sqlite3.Connection) -> None:
         conn.execute("DROP TABLE IF EXISTS airports")
 
-    def save(self, conn: sqlite3.Connection) -> None:
+    def update(self, conn: sqlite3.Connection) -> None:
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -46,13 +46,7 @@ class Airport:
         )
 
         if cursor.rowcount == 0:
-            cursor.execute(
-                """
-                INSERT INTO airports (code, name, address, status)
-                VALUES (?, ?, ?, ?)
-            """,
-                (self.code, self.name, self.address, self.status.value),
-            )
+            raise KeyError(f"Airport with code {self.code} not found")
 
     @classmethod
     def create(
@@ -64,7 +58,17 @@ class Airport:
         status: AirportStatus,
     ) -> "Airport":
         airport = cls(code, name, address, status)
-        airport.save(conn)
+        cursor = conn.cursor()
+        if Airport.get_by_code(conn, code) is not None:
+            raise ValueError("Airport with the same code already created")
+
+        cursor.execute(
+            """
+            INSERT INTO airports (code, name, address, status)
+            VALUES (?, ?, ?, ?)
+        """,
+            (code, name, address, status.value),
+        )
         return airport
 
     @classmethod
