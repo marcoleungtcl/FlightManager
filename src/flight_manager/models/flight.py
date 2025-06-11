@@ -60,7 +60,7 @@ class Flight:
 
     def save(self, conn: sqlite3.Connection) -> None:
         cursor = conn.cursor()
-        if self.flight_id:  # Update existing flight
+        if self.flight_id:  
             cursor.execute(
                 """
                 UPDATE flights SET
@@ -90,7 +90,7 @@ class Flight:
                     self.flight_id,
                 ),
             )
-        else:  # Insert new flight
+        else:  
             cursor.execute(
                 """
                 INSERT INTO flights (
@@ -211,7 +211,7 @@ class Flight:
     ) -> List["Flight"]:
         cursor = conn.cursor()
 
-        # Base query
+        
         query = """
             SELECT 
                 f.flight_id,
@@ -231,7 +231,7 @@ class Flight:
             LEFT JOIN pilots p ON f.pilot_id = p.pilot_id
         """
 
-        # Build WHERE clause based on provided filters
+        
         conditions = []
         params = []
 

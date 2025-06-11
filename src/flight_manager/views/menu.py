@@ -1,5 +1,6 @@
 from typing import Callable
 
+
 def create_menu(title: str, menu_options: list[tuple[str, Callable[[], None]]]):
     def menu():
         while True:
@@ -13,7 +14,7 @@ def create_menu(title: str, menu_options: list[tuple[str, Callable[[], None]]]):
             except ValueError:
                 print("Invalid choice, please try again.")
                 continue
-        
+
             if choice == len(menu_options) + 1:
                 break
 
@@ -21,4 +22,5 @@ def create_menu(title: str, menu_options: list[tuple[str, Callable[[], None]]]):
                 menu_options[choice - 1][1]()
             else:
                 print("Invalid choice, please try again.")
+
     return menu

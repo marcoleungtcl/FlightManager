@@ -43,10 +43,8 @@ def update_airport():
     """Update airport details through an interactive menu"""
     print("\nUpdate Airport")
 
-    # First show all airports so user can choose which to update
     view_airports()
 
-    # Get airport code to update
     airport_code = (
         input("\nEnter code of airport to update (or 'cancel' to abort): ")
         .strip()
@@ -114,10 +112,8 @@ def update_airport():
 
 def delete_airport():
     """Delete an airport through an interactive menu"""
-    # First show all airports so user can choose which to delete
     view_airports()
 
-    # Get airport code to delete
     airport_code = (
         input("\nEnter code of airport to delete (or 'cancel' to abort): ")
         .strip()
@@ -135,7 +131,6 @@ def delete_airport():
             print(f"No airport found with code {airport_code}")
             return
 
-        # Show confirmation with airport details
         print("\nAirport to be deleted:")
         print(
             f"Code: {airport.code} | Name: {airport.name} | "
@@ -149,7 +144,6 @@ def delete_airport():
         )
         if confirmation == "y":
             try:
-                # Check if airport is used in any flights
                 flights = Flight.get_all(conn, origin_airport=airport) + Flight.get_all(
                     conn, destination_airport=airport
                 )
